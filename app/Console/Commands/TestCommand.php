@@ -73,6 +73,11 @@ class TestCommand extends Command
 
                 $data = $this->opGGService->obterDadosOpGG($formattedName);
 
+                if(!isset($data['pageProps']['data']['level'])) {
+                    $message->channel->sendMessage('Não encontrei nada, tente novamente, tente como o exemplo: soul#gule');
+                    return;
+                }
+
                 if(isset($data['pageProps']['statusCode']) && $data['pageProps']['statusCode'] == '404') {
                     $message->channel->sendMessage('Não encontrei nada, tente novamente, tente como o exemplo: soul#gule');
                     return;
