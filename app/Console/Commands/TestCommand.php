@@ -191,6 +191,67 @@ class TestCommand extends Command
                         $message->channel->sendMessage('Not in game.');
                     }
                 }
+
+                if (strtolower(substr($message->content, 0, 7)) == 'artist:') {
+                    $spotifyService = app()->make('App\Services\SpotifyService');
+                    $spotifyService->search($message->content, 'artist');
+
+                    $message->channel->sendMessage('Searching...');
+
+                    $maxAttempts = 5;
+
+                    $attempts = 0;
+
+                    $success = false;
+
+                    while ($attempts < $maxAttempts && !$success) {
+                        try {
+                            $name = substr($message->content, 7);
+                            $name = trim($name);
+                            $name = strtolower($name);
+                            $data = $spotifyService->search($name, 'artist');
+
+                            if(!$data)
+                            {
+                                $message->channel->sendMessage('Error searching, try again.');
+                                return;
+                            }
+
+                            $data = $data['artists']['items'];
+                            
+                            foreach($data as $artist)
+                            {
+                                if(strtolower($artist['name']) == $name)
+                                {
+                                    $data = $artist;
+                                    break;
+                                }
+                            }
+
+                            if(!isset($data['images'][0]['url']))
+                            {
+                                $message->channel->sendMessage('Error searching, try again.');
+                                return;
+                            }
+
+                            $message->channel->sendMessage($data['images'][0]['url']);
+
+                            $reply = "Artist details:\n\n";
+                            $reply .= "**Name:** {$data['name']}\n";
+                            $reply .= "**Genres:** " . implode(', ', $data['genres']) . "\n";
+                            $reply .= "**Popularity:** {$data['popularity']}\n";
+                            $reply .= "**Followers:** {$data['followers']['total']}\n";
+                            $reply .= "**Link:** {$data['external_urls']['spotify']}\n";
+
+                            $message->channel->sendMessage($reply);
+                            $success = true;
+                        } catch (\Exception $e) {
+                            $attempts++;
+                            sleep(1);
+                            Log::error($e->getMessage());
+                        }
+                    }
+                }
             });
     
             $discord->on(Event::TYPING_START, function (TypingStart $typing, Discord $discord) {
