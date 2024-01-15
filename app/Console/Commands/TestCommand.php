@@ -252,6 +252,139 @@ class TestCommand extends Command
                         }
                     }
                 }
+
+                if (strtolower(substr($message->content, 0, 6)) == 'album:') {
+                    $spotifyService = app()->make('App\Services\SpotifyService');
+                    $spotifyService->search($message->content, 'album');
+
+                    $message->channel->sendMessage('Searching...');
+
+                    $maxAttempts = 5;
+
+                    $attempts = 0;
+
+                    $success = false;
+
+                    while ($attempts < $maxAttempts && !$success) {
+                        try {
+                            $name = substr($message->content, 6);
+                            $name = trim($name);
+                            $name = strtolower($name);
+                            $data = $spotifyService->search($name, 'album');
+
+                            if(!$data)
+                            {
+                                $message->channel->sendMessage('Error searching, try again.');
+                                return;
+                            }
+
+                            $data = $data['albums']['items'];
+
+                            foreach($data as $album)
+                            {
+                                if(strtolower($album['name']) == $name)
+                                {
+                                    $data = $album;
+                                    break;
+                                }
+                            }
+
+                            if(!isset($data['images'][0]['url']))
+                            {
+                                $message->channel->sendMessage('Error searching, try again.');
+                                return;
+                            }
+
+                            $message->channel->sendMessage($data['images'][0]['url']);
+
+                            $reply = "Album details:\n\n";
+                            $reply .= "**Name:** {$data['name']}\n";
+                            foreach($data['artists'] as $artist)
+                            {
+                                $reply .= "**Artist:** {$artist['name']}\n";
+                                $reply .= "**Artist link:** {$artist['external_urls']['spotify']}\n";
+                            }
+                            $reply .= "**Release date:** {$data['release_date']}\n";
+                            $reply .= "**Total tracks:** {$data['total_tracks']}\n";
+                            $reply .= "**Link:** {$data['external_urls']['spotify']}\n";
+
+                            $message->channel->sendMessage($reply);
+                            $success = true;
+                        } catch (\Exception $e) {
+                            $attempts++;
+                            sleep(1);
+                            Log::error($e->getMessage());
+                        }
+                    }
+                }
+
+                if (strtolower(substr($message->content, 0, 6)) == 'track:') {
+                    $spotifyService = app()->make('App\Services\SpotifyService');
+                    $spotifyService->search($message->content, 'track');
+
+                    $message->channel->sendMessage('Searching...');
+
+                    $maxAttempts = 5;
+
+                    $attempts = 0;
+
+                    $success = false;
+
+                    while ($attempts < $maxAttempts && !$success) {
+                        try {
+                            $name = substr($message->content, 6);
+                            $name = trim($name);
+                            $name = strtolower($name);
+                            $data = $spotifyService->search($name, 'track');
+
+                            if(!$data)
+                            {
+                                $message->channel->sendMessage('Error searching, try again.');
+                                return;
+                            }
+
+                            $data = $data['tracks']['items'];
+
+                            foreach($data as $track)
+                            {
+                                if(strtolower($track['name']) == $name)
+                                {
+                                    $data = $track;
+                                    break;
+                                }
+                            }
+
+                            if(!isset($data['album']['images'][0]['url']))
+                            {
+                                $message->channel->sendMessage('Error searching, try again.');
+                                return;
+                            }
+
+                            $message->channel->sendMessage($data['album']['images'][0]['url']);
+
+                            $reply = "Track details:\n\n";
+                            $reply .= "**Name:** {$data['name']}\n";
+                            foreach($data['artists'] as $artist)
+                            {
+                                $reply .= "**Artist:** {$artist['name']}\n";
+                                $reply .= "**Artist link:** {$artist['external_urls']['spotify']}\n";
+                            }
+                            $reply .= "**Album:** {$data['album']['name']}\n";
+                            $reply .= "**Album link:** {$data['album']['external_urls']['spotify']}\n";
+                            $reply .= "**Release date:** {$data['album']['release_date']}\n";
+                            $reply .= "**Track number:** {$data['track_number']}\n";
+                            $reply .= "**Link:** {$data['external_urls']['spotify']}\n";
+
+                            $message->channel->sendMessage($reply);
+                            $success = true;
+                        } catch (\Exception $e) {
+                            $attempts++;
+                            sleep(1);
+                            Log::error($e->getMessage());
+                        }
+                    }
+                }
+                
             });
     
             $discord->on(Event::TYPING_START, function (TypingStart $typing, Discord $discord) {
